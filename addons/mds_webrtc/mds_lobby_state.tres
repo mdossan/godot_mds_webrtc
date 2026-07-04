@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="MdsLobbyState" format=3 uid="uid://cvtdt72jvs6jh"]
+
+[ext_resource type="Script" uid="uid://bjp47xnwg8urm" path="res://addons/mds_webrtc/mds_lobby_state.gd" id="1_lvn8l"]
+
+[resource]
+script = ExtResource("1_lvn8l")
+metadata/_custom_type_script = "uid://bjp47xnwg8urm"

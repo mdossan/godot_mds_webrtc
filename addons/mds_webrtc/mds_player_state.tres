@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="PlayerData" format=3 uid="uid://ciqhooegx1uwr"]
+
+[ext_resource type="Script" uid="uid://d20icvw4hq5px" path="res://addons/mds_webrtc/mds_player_state.gd" id="1_ww2ll"]
+
+[resource]
+script = ExtResource("1_ww2ll")
+metadata/_custom_type_script = "uid://d20icvw4hq5px"

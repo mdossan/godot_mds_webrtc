@@ -1,0 +1,7 @@
+[gd_resource type="Resource" script_class="ListLobbyData" format=3 uid="uid://dj3xb1520b145"]
+
+[ext_resource type="Script" uid="uid://cdyolw0wccn08" path="res://addons/mds_webrtc/mds_available_lobbies_state.gd" id="1_p2ap3"]
+
+[resource]
+script = ExtResource("1_p2ap3")
+metadata/_custom_type_script = "uid://cdyolw0wccn08"

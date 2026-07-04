@@ -1,0 +1,11 @@
+[gd_scene format=3 uid="uid://ycwkwu3thplv"]
+
+[ext_resource type="Script" uid="uid://c2xajvx8soago" path="res://addons/mds_webrtc/mds_webrtc.gd" id="1_vw285"]
+
+[node name="MdsWebRTC" type="Node" unique_id=1437481211]
+script = ExtResource("1_vw285")
+
+[node name="ConnectionCheckerTimer" type="Timer" parent="." unique_id=36803005]
+unique_name_in_owner = true
+
+[connection signal="timeout" from="ConnectionCheckerTimer" to="." method="_on_connection_checker_timer"]
