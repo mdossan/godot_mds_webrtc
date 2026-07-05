@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://cy6lld1rkui0r"]
+
+[ext_resource type="Script" uid="uid://bmgkrr87ccynu" path="res://addons/mds_webrtc/player_spawner/mds_player_spawner.gd" id="1_68bml"]
+
+[node name="MdsPlayerSpawner" type="Node3D" unique_id=310786427]
+script = ExtResource("1_68bml")
