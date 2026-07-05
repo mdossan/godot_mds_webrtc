@@ -1,0 +1,6 @@
+[gd_scene format=3 uid="uid://dj5n5aejaehip"]
+
+[ext_resource type="Script" uid="uid://1q17jt5bbgwi" path="res://addons/mds_webrtc/handshake_sync/mds_handshake_sync.gd" id="1_ob1pj"]
+
+[node name="MdsHandshakeSync" type="Node" unique_id=1648891837]
+script = ExtResource("1_ob1pj")
