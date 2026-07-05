@@ -68,6 +68,7 @@ func _process(_delta):
 						var new_player_name: String = data.get("playerName")
 						create_webrtc_connection_between_player(new_player_id)
 						new_peer_connected.emit(new_player_id, new_player_name)
+						mds_lobby_state.player_ids.append(new_player_id)
 						mds_lobby_state.players.append(new_player_name)
 						mds_lobby_state.player_names_by_player_ids[new_player_id] = new_player_name
 						mds_lobby_state.emit_changed()
@@ -78,6 +79,7 @@ func _process(_delta):
 						print_debug("[MdsWebRTC]: Receiving `LOBBY_CREATED` event from signaling server")
 						lobby_created.emit(mds_player_state.player_id, mds_player_state.player_name)
 						mds_lobby_state.players.append(mds_player_state.player_name)
+						mds_lobby_state.player_ids.append(mds_player_state.player_id)
 						mds_lobby_state.player_names_by_player_ids[mds_player_state.player_id] = mds_player_state.player_name
 						mds_lobby_state.emit_changed()
 
@@ -111,8 +113,7 @@ func _process(_delta):
 							var key: int = player_id.to_int()
 							var player_name: String = players_in_room[player_id]
 							mds_lobby_state.player_names_by_player_ids[key] = player_name
-						#players_in_lobby.emit(player_names)
-						#mds_lobby_state.players = player_names
+							mds_lobby_state.player_ids.append(key)
 						mds_lobby_state.emit_changed()
 						print_debug("[MdsWebRTC]: Receiving `RESULT_JOIN_LOBBY` event from signaling server")
 
@@ -120,14 +121,13 @@ func _process(_delta):
 				print("< Got binary data from server: %d bytes" % packet.size())
 #endregion
 
+#region Public
 
-func register():
-	var message: Dictionary = {
-		"type": "REGISTER",
-		"playerId": mds_player_state.player_id
-	}
-	var json_message: String = JSON.stringify(message)
-	socket.send_text(json_message)
+func start_game():
+	var peer_ids: Array[int] = []
+	peer_ids.assign(webrtc.get_peers().keys())
+	peer_ids.push_front(mds_player_state.player_id)
+	game_started.emit(peer_ids)
 
 func create_lobby():
 	if mds_player_state.player_name == "":
@@ -153,6 +153,62 @@ func list_lobbies():
 	var json_message: String = JSON.stringify(message)
 	socket.send_text(json_message)
 	print_debug("[MdsWebRTC] Lobby listing request sent to signaling server")
+
+#endregion
+
+#region Private
+
+func _on_ice_candidate(media: String, index: int, ice_name: String, destination_player_id: int):
+	var message: Dictionary = {
+			"type": "ICE",
+			"sourcePlayerId": mds_player_state.player_id,
+			"destinationPlayerId": destination_player_id,
+			"media": media,
+			"index": index,
+			"name": ice_name,
+		}
+	var json_message: String = JSON.stringify(message)
+	socket.send_text(json_message)
+
+func handle_session_creation(type: String, sdp: String, dest_player_id: int):
+	webrtc.get_peer(dest_player_id).get("connection").set_local_description(type, sdp)
+	if type == "offer":
+		# This SDP is an offer, it will be transmitted to the newly connected player
+		# It is initiated from create_webrtc_connection_between_player
+		var message: Dictionary = {
+			"type": "OFFER",
+			"playerId": mds_player_state.player_id,
+			"newPlayerId": dest_player_id,
+			"sdp": sdp,
+		}
+		var json_message: String = JSON.stringify(message)
+		socket.send_text(json_message)
+	else:
+		# This SDP answer is created after handling the offer from an already connected player
+		# `create_webrtc_connection_from_offer`
+		var message: Dictionary = {
+			"type": "ANSWER",
+			"sourcePlayerId": mds_player_state.player_id,
+			"destinationPlayerId": dest_player_id,
+			"sdp": sdp,
+		}
+		var json_message: String = JSON.stringify(message)
+		socket.send_text(json_message)
+
+func _on_connection_checker_timer() -> void:
+	ping.rpc()
+
+func _on_peer_connected(player_id: int) -> void:
+	mds_lobby_state.ready_players[player_id] = true
+	mds_lobby_state.emit_changed()
+
+func register():
+	var message: Dictionary = {
+		"type": "REGISTER",
+		"playerId": mds_player_state.player_id
+	}
+	var json_message: String = JSON.stringify(message)
+	socket.send_text(json_message)
 
 func handle_join_lobby(lobby_id: String):
 	if mds_player_state.player_name == "":
@@ -200,59 +256,6 @@ func create_webrtc_connection_from_offer(remote_player_id: int, sdp: String):
 	# Load the provided remote SDP
 	peer.set_remote_description("offer", sdp)
 
-#region Public
-func start_game():
-	var peer_ids: Array[int] = []
-	peer_ids.assign(webrtc.get_peers().keys())
-	peer_ids.push_front(mds_player_state.player_id)
-	game_started.emit(peer_ids)
-#endregion
-
-#region Private
-func _on_ice_candidate(media: String, index: int, ice_name: String, destination_player_id: int):
-	var message: Dictionary = {
-			"type": "ICE",
-			"sourcePlayerId": mds_player_state.player_id,
-			"destinationPlayerId": destination_player_id,
-			"media": media,
-			"index": index,
-			"name": ice_name,
-		}
-	var json_message: String = JSON.stringify(message)
-	socket.send_text(json_message)
-
-func handle_session_creation(type: String, sdp: String, dest_player_id: int):
-	webrtc.get_peer(dest_player_id).get("connection").set_local_description(type, sdp)
-	if type == "offer":
-		# This SDP is an offer, it will be transmitted to the newly connected player
-		# It is initiated from create_webrtc_connection_between_player
-		var message: Dictionary = {
-			"type": "OFFER",
-			"playerId": mds_player_state.player_id,
-			"newPlayerId": dest_player_id,
-			"sdp": sdp,
-		}
-		var json_message: String = JSON.stringify(message)
-		socket.send_text(json_message)
-	else:
-		# This SDP answer is created after handling the offer from an already connected player
-		# `create_webrtc_connection_from_offer`
-		var message: Dictionary = {
-			"type": "ANSWER",
-			"sourcePlayerId": mds_player_state.player_id,
-			"destinationPlayerId": dest_player_id,
-			"sdp": sdp,
-		}
-		var json_message: String = JSON.stringify(message)
-		socket.send_text(json_message)
-
-
-func _on_connection_checker_timer() -> void:
-	ping.rpc()
-
-func _on_peer_connected(player_id: int) -> void:
-	mds_lobby_state.ready_players[player_id] = true
-	mds_lobby_state.emit_changed()
 #endregion
 
 #region RPCs
