@@ -15,3 +15,4 @@ func _ready() -> void:
 @rpc("any_peer", "reliable")
 func enable_sync_for_remote_player(remote_player_id: int):
 	remote_players_id.push_back(remote_player_id)
+	player_to_sync_added.emit(remote_player_id)
