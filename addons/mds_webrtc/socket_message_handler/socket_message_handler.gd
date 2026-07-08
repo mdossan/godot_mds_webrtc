@@ -1,8 +1,8 @@
 class_name SocketMessageHandler
 
-static func handle_new_message(mds_webrtc: MdsWebRTC) -> void:
-	var packet = mds_webrtc.socket.get_packet()
-	if mds_webrtc.socket.was_string_packet():
+static func handle_new_message(mds_socket: MdsSocketClient, mds_webrtc: MdsWebRTC) -> void:
+	var packet = mds_socket.socket.get_packet()
+	if mds_socket.socket.was_string_packet():
 		var packet_text = packet.get_string_from_utf8()
 		var data: Dictionary = JSON.parse_string(packet_text)
 		match data.get("type"):
