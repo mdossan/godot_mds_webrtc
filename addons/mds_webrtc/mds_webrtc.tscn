@@ -1,11 +1,17 @@
 [gd_scene format=3 uid="uid://ycwkwu3thplv"]
 
 [ext_resource type="Script" uid="uid://c2xajvx8soago" path="res://addons/mds_webrtc/mds_webrtc.gd" id="1_vw285"]
+[ext_resource type="Script" uid="uid://b2m7spgae41qj" path="res://addons/mds_webrtc/mds_socket_client.gd" id="2_8um5a"]
 
 [node name="MdsWebRTC" type="Node" unique_id=1437481211]
 script = ExtResource("1_vw285")
 
 [node name="ConnectionCheckerTimer" type="Timer" parent="." unique_id=36803005]
 unique_name_in_owner = true
+
+[node name="MdsSocketClient" type="Node" parent="." unique_id=1020668826 node_paths=PackedStringArray("mds_webrtc")]
+unique_name_in_owner = true
+script = ExtResource("2_8um5a")
+mds_webrtc = NodePath("..")
 
 [connection signal="timeout" from="ConnectionCheckerTimer" to="." method="_on_connection_checker_timer"]
