@@ -3,8 +3,8 @@ class_name MdsWebRTC extends Node
 #region signals
 signal socket_ready
 signal game_started(peer_ids: Array[int])
-signal new_peer_connected(peer_id: int, player_name: String)
-signal lobby_created(peer_id: int, player_name: String)
+signal new_player_joined(new_player_id: int)
+signal lobby_created()
 signal received_lobbies(lobbies: Array[Dictionary])
 signal players_in_lobby(players_names: Array[String])
 signal player_is_ready(player_id: int)
@@ -34,91 +34,13 @@ func _process(_delta):
 		register()
 		return
 	
-	webrtc.poll()
-	var peers = webrtc.get_peers()
-	for peer_key in peers:
-		var connected: bool = webrtc.get_peer(peer_key).get("connected")
-		if connected:
-			pass
-			#print("[%s] Connected with peer %s" % [player_id, peer_key])
-
 	socket.poll()
 	var state = socket.get_ready_state()
 	if state == WebSocketPeer.STATE_OPEN:
 		while socket.get_available_packet_count():
-			var packet = socket.get_packet()
-			if socket.was_string_packet():
-				var packet_text = packet.get_string_from_utf8()
-				var data: Dictionary = JSON.parse_string(packet_text)
-				match data.get("type"):
-					"REGISTERED":
-						socket_ready.emit()
-						print_debug("[MdsWebRTC][%s]: Receiving `REGISTERED` event from signaling server" % mds_player_state.player_id)
-
-					"RESULT_LIST_LOBBIES":
-						var lobbies: Array[Dictionary] = []
-						lobbies.assign(data.get("lobbies"))
-						received_lobbies.emit(lobbies)
-						mds_available_state.lobbies = lobbies
-						mds_available_state.emit_changed()
-						print_debug("[MdsWebRTC][%s]: Receiving `RESULT_LIST_LOBBIES` event from signaling server" % mds_player_state.player_id)
-
-					"PLAYER_JOINED":
-						var new_player_id: int = data.get("playerId")
-						var new_player_name: String = data.get("playerName")
-						create_webrtc_connection_between_player(new_player_id)
-						new_peer_connected.emit(new_player_id, new_player_name)
-						mds_lobby_state.player_ids.append(new_player_id)
-						mds_lobby_state.players.append(new_player_name)
-						mds_lobby_state.player_names_by_player_ids[new_player_id] = new_player_name
-						mds_lobby_state.emit_changed()
-						print_debug("[MdsWebRTC][%s]: Receiving `PLAYER_JOINED` event from signaling server" % mds_player_state.player_id)
-						_number_of_players += 1
-
-					"LOBBY_CREATED":
-						print_debug("[MdsWebRTC]: Receiving `LOBBY_CREATED` event from signaling server")
-						lobby_created.emit(mds_player_state.player_id, mds_player_state.player_name)
-						mds_lobby_state.players.append(mds_player_state.player_name)
-						mds_lobby_state.player_ids.append(mds_player_state.player_id)
-						mds_lobby_state.player_names_by_player_ids[mds_player_state.player_id] = mds_player_state.player_name
-						mds_lobby_state.emit_changed()
-
-					"NEW_OFFER":
-						var sdp: String = data.get("sdp")
-						var offering_player_id: int = data.get("offeringPlayerId")
-						create_webrtc_connection_from_offer(offering_player_id, sdp)
-
-					"NEW_ANSWER":
-						var source_player_id: int = data.get("sourcePlayerId")
-						var sdp: String = data.get("sdp")
-						#print("[%s] NEW ANSWER: %s | %s" % [player_id, source_player_id, sdp])
-						var remote_peer: WebRTCPeerConnection = webrtc.get_peer(source_player_id).get("connection")
-						remote_peer.set_remote_description("answer", sdp)
-
-					"NEW_ICE":
-						var source_player_id: int = data.get("sourcePlayerId")
-						var media: String = data.get("media")
-						var index: int = data.get("index")
-						var ice_name: String = data.get("name")
-						#print("[%s] NEW ICE for peer (%s): %s | %s | %s" % [player_id, source_player_id, media, index, ice_name])
-						var remote_peer: WebRTCPeerConnection = webrtc.get_peer(source_player_id).get("connection")
-						var err = remote_peer.add_ice_candidate(media, index, ice_name)
-						assert(err == OK, "CANT ADD ICE %s" % err)
-
-					"RESULT_JOIN_LOBBY":
-						var players_in_room: Dictionary[String, String] = {}
-						players_in_room.assign(data.get("players"))
-						mds_lobby_state.player_names_by_player_ids = {}
-						for player_id: String in players_in_room:
-							var key: int = player_id.to_int()
-							var player_name: String = players_in_room[player_id]
-							mds_lobby_state.player_names_by_player_ids[key] = player_name
-							mds_lobby_state.player_ids.append(key)
-						mds_lobby_state.emit_changed()
-						print_debug("[MdsWebRTC]: Receiving `RESULT_JOIN_LOBBY` event from signaling server")
-
-			else:
-				print("< Got binary data from server: %d bytes" % packet.size())
+			SocketMessageHandler.handle_new_message(self)
+	
+	webrtc.poll()
 #endregion
 
 #region Public
