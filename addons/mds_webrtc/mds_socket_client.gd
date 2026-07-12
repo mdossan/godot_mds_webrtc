@@ -32,5 +32,6 @@ func send_data(data: Dictionary) -> void:
 func register():
 	send_data({
 		"type": "REGISTER",
+		"gameKey": mds_webrtc.game_key,
 		"playerId": mds_webrtc.mds_player_state.player_id
 	})

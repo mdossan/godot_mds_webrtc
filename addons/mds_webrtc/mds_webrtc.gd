@@ -14,6 +14,7 @@ signal player_is_ready(player_id: int)
 @export var mds_available_state: MdsAvailableLobbiesState = preload("res://addons/mds_webrtc/mds_available_lobbies_state.tres")
 @export var mds_lobby_state: MdsLobbyState = preload("res://addons/mds_webrtc/mds_lobby_state.tres")
 @export var mds_player_state: MdsPlayerState = preload("res://addons/mds_webrtc/mds_player_state.tres")
+@export var game_key: String
 
 var _number_of_players: int = 1
 var webrtc = WebRTCMultiplayerPeer.new()
@@ -45,6 +46,7 @@ func create_lobby():
 	%MdsSocketClient.init_socket()
 	await socket_ready
 	%MdsSocketClient.send_data({
+		"gameKey": game_key,
 		"type": "CREATE_LOBBY",
 		"playerName": mds_player_state.player_name,
 	})
@@ -60,7 +62,10 @@ func create_lobby():
 func list_lobbies():
 	%MdsSocketClient.init_socket()
 	await socket_ready
-	%MdsSocketClient.send_data({ "type": "LIST_LOBBIES" })
+	%MdsSocketClient.send_data({ 
+		"gameKey": game_key,
+		"type": "LIST_LOBBIES",
+	})
 	print_debug("[MdsWebRTC] Lobby listing request sent to signaling server")
 
 #endregion
@@ -69,6 +74,7 @@ func list_lobbies():
 
 func _on_ice_candidate(media: String, index: int, ice_name: String, destination_player_id: int):
 	%MdsSocketClient.send_data({
+		"gameKey": game_key,
 		"type": "ICE",
 		"sourcePlayerId": mds_player_state.player_id,
 		"destinationPlayerId": destination_player_id,
@@ -83,6 +89,7 @@ func handle_session_creation(type: String, sdp: String, dest_player_id: int):
 		# This SDP is an offer, it will be transmitted to the newly connected player
 		# It is initiated from create_webrtc_connection_between_player
 		%MdsSocketClient.send_data({
+			"gameKey": game_key,
 			"type": "OFFER",
 			"playerId": mds_player_state.player_id,
 			"newPlayerId": dest_player_id,
@@ -92,6 +99,7 @@ func handle_session_creation(type: String, sdp: String, dest_player_id: int):
 		# This SDP answer is created after handling the offer from an already connected player
 		# `create_webrtc_connection_from_offer`
 		%MdsSocketClient.send_data({
+			"gameKey": game_key,
 			"type": "ANSWER",
 			"sourcePlayerId": mds_player_state.player_id,
 			"destinationPlayerId": dest_player_id,
@@ -112,6 +120,7 @@ func handle_join_lobby(lobby_id: String):
 	webrtc.create_mesh(mds_player_state.player_id)
 	multiplayer.multiplayer_peer = webrtc
 	%MdsSocketClient.send_data({
+		"gameKey": game_key,
 		"type": "JOIN_LOBBY",
 		"lobbyId": lobby_id,
 		"playerName": mds_player_state.player_name,
